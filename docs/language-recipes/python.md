@@ -18,6 +18,21 @@ resp = client.responses.create(model="gpt-5", input="Hello")
 print(resp.output_text)
 ```
 
+Reasoning and stateless request (encrypted reasoning by default):
+
+```python
+from openai import OpenAI
+client = OpenAI()
+
+resp = client.responses.create(
+    model="gpt-5",
+    input=input_items,
+    store=False,
+    reasoning={"effort": "minimal"}
+)
+print(resp.output_text)
+```
+
 Mappings:
 - prompt → input
 - max_tokens → max_output_tokens

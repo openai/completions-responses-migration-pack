@@ -20,7 +20,6 @@ AUTO_COMMIT="${AUTO_COMMIT:-}"
 APPROVAL_POLICY="${APPROVAL_POLICY:-}"
 DANGEROUS_MODE="${DANGEROUS_MODE:-0}"
 MIGRATE_TO_GPT5="${MIGRATE_TO_GPT5:-1}"
-ZDR_ENABLED="${ZDR_ENABLED:-0}"
 BRANCH_NAME="${BRANCH_NAME:-}"
 DANGEROUS_CONFIRM="${DANGEROUS_CONFIRM:-}"
 
@@ -54,7 +53,7 @@ Options:
 
 Env:
   DEFAULT_MODEL, MODE_FULL_AUTO=1, DRY_RUN=1, NO_INTERACTIVE=1, OPEN_PR=1,
-  APPROVAL_POLICY, DANGEROUS_MODE=1, MIGRATE_TO_GPT5=0/1, ZDR_ENABLED=0/1,
+  APPROVAL_POLICY, DANGEROUS_MODE=1, MIGRATE_TO_GPT5=0/1,
   DANGEROUS_CONFIRM=1 (skip interactive confirm when using danger-full-access)
 USAGE
 }
@@ -187,23 +186,10 @@ ask_model_preference() {
   export MIGRATE_TO_GPT5
 }
 
-ask_zdr_preference() {
-  # Ask whether org has Zero-Data Retention policies enabled. Default no.
-  ZDR_ENABLED=0
-  if [[ "$NO_INTERACTIVE" != "1" ]]; then
-    echo -n "[?] Is your organization configured for Zero Data Retention (ZDR)? [y/N]: "
-    read -r ans || true
-    if [[ "$ans" =~ ^[Yy]$ ]]; then
-      ZDR_ENABLED=1
-    fi
-  fi
-  if [[ "$ZDR_ENABLED" == "1" ]]; then
-    info "Zero Data Retention (ZDR) enabled: will instruct Codex to set store=false, avoid using previous message IDs, and avoid persisting reasoning."
-  else
-    info "Zero Data Retention (ZDR) disabled: will follow standard best practices for state and storage."
-  fi
-  export ZDR_ENABLED
-}
+# ZDR preference prompt removed; policy is unified:
+# - Always set store=false to reduce overhead and avoid server-side retention
+# - Do not rely on previous message IDs or server-stored context
+# - Always include encrypted reasoning tokens (no plaintext reasoning)
 
 create_branch() {
   local ts default_branch branch_input branch
@@ -267,16 +253,20 @@ Content items:
 Multi‑turn conversations:
 - Manage state client‑side; pass prior turns explicitly via `input` items.
 - Example items: [{ role: "system"|"user"|"assistant"|"tool", content: [ { type: "text", text: "..." } ] }]
-- Prefer concise state; avoid leaking secrets. Use `store` according to org policy.
+- Prefer concise state; avoid leaking secrets. Always set `store: false` to reduce overhead and avoid server retention.
 
 Tool use:
 - Define `tools` for function calling; let the model pick with `tool_choice: "auto"` or force a tool.
 - When the model requests a tool call, execute it and include its result as a `tool` role item in the next `input`.
 - Keep tool JSON schemas minimal and validated.
 
-Data retention:
-- ZDR orgs: set `store: false`; do not rely on previous message IDs or server‑stored context.
-- Non‑ZDR: keep `store` unset unless you need server persistence; prefer client‑managed state.
+Data retention & state:
+- Set `store: false` on all Responses requests.
+- Do not rely on previous message IDs or server‑stored context; keep state in your app.
+
+Reasoning:
+- For GPT‑5, set an appropriate `reasoning.effort`.
+- Always include encrypted reasoning tokens (no plaintext chain‑of‑thought). Use the SDK/API option for encrypted reasoning traces where available.
 
 GPT‑5 model notes:
 - Ensure `temperature` is not specified or equals `1`.
@@ -309,6 +299,8 @@ Acceptance:
 - Imports/initialization updated. Builds/tests pass or actionable notes provided.
 - If model policy is gpt-5, ensure temperature is not set or equals 1; update code accordingly.
 - Replace any top-level response_format usage with text.format in Responses (e.g., text: { format: "json" }).
+- Always set `store: false`; do not rely on previous message IDs or server-stored context; keep conversation state in-app.
+- Always include encrypted reasoning tokens; do not emit plaintext chain-of-thought.
 - Summary includes edited files, counts of updated call sites, and next steps.
 EOF
 
@@ -431,17 +423,12 @@ run_codex() {
   fi
   local compat_policy="Compatibility policy: do NOT keep legacy response shapes; update callers to work with Responses API outputs."
   local comments_policy="Comment policy: do NOT leave tombstone/transition comments or backup files; produce clean edits for PR."
-  local state_policy
-  if [[ "$ZDR_ENABLED" == "1" ]]; then
-    state_policy="Zero Data Retention (ZDR) policy: set store=false on all Responses requests; do not rely on previous message IDs or server-stored context; keep conversation state local and minimize logged metadata."
-  else
-    state_policy="State policy: prefer client-managed conversation state; only use server storage (store=true) when the application already relies on it; avoid sending secrets in input."
-  fi
+  local unified_policy="State & retention policy: set store=false on all Responses requests; do not rely on previous message IDs or server-stored context; keep conversation state local and minimal. Reasoning policy: always include encrypted reasoning tokens; do not emit plaintext chain-of-thought."
 
   if [[ "$DRY_RUN" == "1" ]]; then
-    prompt="Read $CODEX_KIT_DIR/docs and $CODEX_KIT_DIR/prompts/migrate-to-responses.md; $model_policy $compat_policy $comments_policy $state_policy Do not run git add/commit/push; leave commits to the bootstrap. Create a migration plan and a DETAILED unified diff of proposed changes WITHOUT writing to disk; include SDK upgrade guidance (e.g., $upgrades); suggest build commands ($builds) and test commands ($tests); summarize call site counts and impacted files."
+    prompt="Read $CODEX_KIT_DIR/docs and $CODEX_KIT_DIR/prompts/migrate-to-responses.md; $model_policy $compat_policy $comments_policy $unified_policy Do not run git add/commit/push; leave commits to the bootstrap. Create a migration plan and a DETAILED unified diff of proposed changes WITHOUT writing to disk; include SDK upgrade guidance (e.g., $upgrades); suggest build commands ($builds) and test commands ($tests); summarize call site counts and impacted files."
   else
-    prompt="Read $CODEX_KIT_DIR/docs and $CODEX_KIT_DIR/prompts/migrate-to-responses.md; $model_policy $compat_policy $comments_policy $state_policy Do not run git add/commit/push; leave commits to the bootstrap. Migrate this repo from Completions to Responses; upgrade the OpenAI SDK to a version supporting Responses (e.g., $upgrades) and reinstall deps; run build if present ($builds); run tests if present ($tests); print a final summary."
+    prompt="Read $CODEX_KIT_DIR/docs and $CODEX_KIT_DIR/prompts/migrate-to-responses.md; $model_policy $compat_policy $comments_policy $unified_policy Do not run git add/commit/push; leave commits to the bootstrap. Migrate this repo from Completions to Responses; upgrade the OpenAI SDK to a version supporting Responses (e.g., $upgrades) and reinstall deps; run build if present ($builds); run tests if present ($tests); print a final summary."
   fi
 
   # Build CLI flags: some are GLOBAL (must precede subcommand), others belong to exec
@@ -561,7 +548,7 @@ main() {
   ensure_auth
   choose_repo
   ask_model_preference
-  ask_zdr_preference
+  
   ensure_clean_or_confirm
   # If non-interactive and not in dry-run, default to full-auto for writing changes unless overridden
   if [[ "$NO_INTERACTIVE" == "1" && "$DRY_RUN" != "1" && -z "$APPROVAL_POLICY" && "$MODE_FULL_AUTO" != "1" && "$DANGEROUS_MODE" != "1" ]]; then

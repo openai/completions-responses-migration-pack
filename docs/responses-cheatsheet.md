@@ -18,7 +18,7 @@
   - **temperature**: unchanged
   - **stop, frequency_penalty, presence_penalty**: supported as relevant
   - **tools/function-calling**: use `tools` in Responses
-  - **store**: optional boolean. `false` disables retaining response objects (default retention ~30 days per platform docs)
+  - **store**: set to `false` by default to avoid retaining response objects and reduce overhead
 
 - **SDK idioms**:
   - Node:
@@ -89,14 +89,45 @@ const res = await client.responses.create({
 console.log(res.output_text);
 ```
 
-- **Reasoning effort (GPT‑5)**:
+- **Reasoning (GPT‑5)**:
   - Migrating from o‑series (`o3`, `o4-mini`, `o1`, `o1-preview`, etc.): `reasoning: { effort: "medium" }`.
   - Migrating from GPT‑series (`gpt-4`, `gpt-4.1`, `gpt-4o`, `gpt-3.5`, etc.): `reasoning: { effort: "minimal" }`.
-  - Respect any explicit `reasoning.effort` already provided by the app.
+  - Always include encrypted reasoning tokens; do not emit plaintext chain‑of‑thought. Use the SDK/API option for encrypted reasoning traces where available. Respect any explicit `reasoning.effort` already provided by the app.
+
+  Example (Node):
+
+  ```js
+  import OpenAI from "openai";
+  const client = new OpenAI();
+
+  const res = await client.responses.create({
+    model: "gpt-5",
+    input,
+    store: false,
+    reasoning: { effort: "minimal" }
+  });
+  console.log(res.output_text);
+  ```
+
+  Example (Python):
+
+  ```python
+  from openai import OpenAI
+  client = OpenAI()
+
+  resp = client.responses.create(
+      model="gpt-5",
+      input=input_items,
+      store=False,
+      reasoning={"effort": "minimal"}
+  )
+  print(resp.output_text)
+  ```
 
 - **Multi‑turn**:
   - Manage conversation state in your app; pass prior turns explicitly via `input` items.
   - Use `type: "input_text"` for user/system turns, and `type: "output_text"` for assistant/tool outputs.
+  - Always set `store: false`; do not rely on previous message IDs or server‑stored context.
 
 ```js
 const input = [
@@ -127,9 +158,9 @@ const res = await client.responses.create({
 const data = JSON.parse(res.output_text);
 ```
 
-- **Data retention**:
-  - ZDR orgs: set `store: false`. Do not rely on previous message IDs or server‑stored context; keep state local and minimize logged metadata.
-  - Non‑ZDR: keep `store` unset unless server persistence is intentional; prefer client‑managed state by default.
+- **Data retention & state**:
+  - Set `store: false` on all Responses requests.
+  - Do not rely on previous message IDs or server‑stored context; keep state local and minimize logged metadata.
 
 - **Gotchas**:
   - If you previously used Chat Completions for conversation state, manage your own state explicitly with Responses.

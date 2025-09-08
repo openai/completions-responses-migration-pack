@@ -29,7 +29,7 @@ Key Responses benefits vs Chat Completions:
 - OpenAI API access (or `codex login` interactive flow)
 
 ### Quick start
-Interactive run (prompts for repo, model policy, Zero Data Retention (ZDR), etc.):
+Interactive run (prompts for repo and model policy):
 
 ```bash
 bash scripts/completions-to-responses-upgrade.sh
@@ -67,12 +67,9 @@ Model selection (prompted interactively; default is GPT‑5):
 
 - If you choose GPT‑5, the tool enforces the runtime rule that `temperature` is omitted or set to `1` to avoid errors.
 
-Zero Data Retention (ZDR):
+State & retention policy:
 
-- You’ll be asked if your org has Zero Data Retention (ZDR) enabled (defaults to No). If Yes, the agent is instructed to:
-  - Set `store: false` on Responses requests
-  - Avoid using previous message IDs or server‑stored context
-  - Keep conversation state local and minimize logged metadata
+- The migration always sets `store: false` on Responses requests, avoids using previous message IDs or server‑stored context, and keeps conversation state local with minimal logged metadata.
 
 ### Flags
 - `-r, --repo <path>`: target git repo
@@ -108,8 +105,7 @@ Zero Data Retention (ZDR):
 
 ### Security & data handling
 - No API keys written to disk; honors environment configuration
-- ZDR orgs: `store:false`, no previous message IDs, local state only
-- Non‑ZDR: prefer client‑managed state by default; only enable server storage intentionally
+- Unified policy: `store:false` by default, no previous message IDs, client‑managed state only; always include encrypted reasoning tokens.
 
 
 ### License & version

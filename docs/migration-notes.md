@@ -7,10 +7,39 @@
 - **Content items**: Replace Chat `content[].type: "text"` with Responses `content[].type: "input_text"` for system/user turns. For assistant or tool outputs, prefer `content[].type: "output_text"`.
 - **Images**: Replace Chat image parts with Responses `content[].type: "input_image"` plus `image_url` or image data.
 
-- **GPT‑5 reasoning effort**:
+- **GPT‑5 reasoning**:
   - From o‑series (o3, o4‑mini, o1, o1‑preview): set `reasoning: { effort: "medium" }`.
   - From GPT‑series (gpt‑4, gpt‑4.1, gpt‑4o, gpt‑3.5): set `reasoning: { effort: "minimal" }`.
   - Heuristic: inspect the previous `model` string; default to minimal unless it clearly starts with `o`.
+  - Always include encrypted reasoning tokens; do not emit plaintext chain‑of‑thought. Use the SDK/API option for encrypted reasoning traces where available.
+
+  Example (Node):
+
+  ```js
+  import OpenAI from "openai";
+  const client = new OpenAI();
+  const res = await client.responses.create({
+    model: "gpt-5",
+    input,
+    store: false,
+    reasoning: { effort: "minimal" }
+  });
+  console.log(res.output_text);
+  ```
+
+  Example (Python):
+
+  ```python
+  from openai import OpenAI
+  client = OpenAI()
+  resp = client.responses.create(
+      model="gpt-5",
+      input=input_items,
+      store=False,
+      reasoning={"effort": "minimal"}
+  )
+  print(resp.output_text)
+  ```
 
 Example transformer (Node/TypeScript):
 
@@ -44,10 +73,10 @@ function toResponsesPayload(body: any): any {
 - **Streaming**: set `stream: true` and handle SSE events (see docs). Only enable if the original used streaming.
 - **Tools**: move Chat Completions function-calling to `tools` with JSON Schema; use `tool_choice` as needed. Provide tool results back via a follow‑up call including a `tool` role item in `input`.
 - **Multi‑turn**: manage conversation state in your app; pass prior turns explicitly using `input` items (system/user/assistant/tool). Do not assume server‑side memory by default.
-- **Storage**: Responses may be retained ~30 days by default. Use `store: false` to opt out (e.g., for ZDR orgs).
-- **Data retention**:
-  - ZDR orgs: set `store: false`; avoid relying on previous message IDs or any server‑stored context; minimize metadata.
-  - Non‑ZDR: keep `store` unset unless the app intentionally uses server persistence; prefer client‑managed state.
+- **Storage**: Default to `store: false` in all cases to reduce overhead and avoid server retention.
+- **Data retention & state**:
+  - Set `store: false` on all Responses requests.
+  - Do not rely on previous message IDs or any server‑stored context; keep state client‑managed and minimize metadata.
 - **Deprecations**: do not hardcode dates—link to the official deprecations page in user docs.
 
 See also: `docs/language-recipes/*.md` for idiomatic code diffs.

@@ -15,4 +15,16 @@ HttpRequest req = HttpRequest.newBuilder()
   .build();
 ```
 
+Reasoning and stateless request:
+
+```java
+String payload = "{\"model\":\"gpt-5\",\"input\":\"Hello\",\"store\":false,\"reasoning\":{\"effort\":\"minimal\"}}";
+HttpRequest req2 = HttpRequest.newBuilder()
+  .uri(URI.create("https://api.openai.com/v1/responses"))
+  .header("Authorization", "Bearer " + System.getenv("OPENAI_API_KEY"))
+  .header("Content-Type", "application/json")
+  .POST(HttpRequest.BodyPublishers.ofString(payload))
+  .build();
+```
+
 
