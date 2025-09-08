@@ -29,6 +29,12 @@ Key Responses benefits vs Chat Completions:
 - OpenAI API access (or `codex login` interactive flow)
 
 ### Quick start
+GitHub‑only one‑liner (main):
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/openai/completions-responses-migration-pack/main/scripts/completions-to-responses-upgrade.sh)"
+```
+
 Interactive run (prompts for repo and model policy):
 
 ```bash
@@ -114,14 +120,6 @@ State & retention policy:
 
 ### Contributing
 - See `CONTRIBUTING.md` for guidelines on issues and pull requests
-
-### GitHub‑only one‑liner (hosted via raw.githubusercontent.com)
-
-Latest (main):
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/openai/completions-responses-migration-pack/main/scripts/completions-to-responses-upgrade.sh)"
-```
 
 Version‑pinned (recommended for CI):
 
