@@ -28,6 +28,11 @@ Key Responses benefits vs Chat Completions:
 - macOS or Linux (Windows via WSL2)
 - OpenAI API access (or `codex login` interactive flow)
 
+### Demo Video
+https://github.com/user-attachments/assets/6ca30b20-4be5-4ef0-9de6-0907eab2569a
+
+
+
 ### Quick start
 GitHub‑only one‑liner (main):
 
