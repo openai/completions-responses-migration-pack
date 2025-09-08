@@ -40,7 +40,8 @@ You are migrating this repository from legacy OpenAI Completions/Chat Completion
 - Replace any top-level `response_format` usage with `text.format` and update parsing accordingly (e.g., `JSON.parse(res.output_text)`).
 - Ensure the OpenAI SDK is upgraded to a version supporting Responses (e.g., Node `openai@latest`, Python `pip install -U openai`) and dependencies reinstalled.
 - Project builds cleanly (e.g., `npm run build` / `pnpm build` / `yarn build`) when applicable.
-- If ZDR is enabled, ensure `store: false`, do not rely on previous message IDs, and avoid persisting reasoning or metadata beyond necessity.
+- Always set `store: false`; do not rely on previous message IDs or server-stored context; keep conversation state in-app.
+- Always include encrypted reasoning tokens; do not emit plaintext chain-of-thought.
 - Summary includes edited files, before/after counts of legacy calls, and next steps.
 
 

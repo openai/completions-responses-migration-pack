@@ -19,6 +19,21 @@ const res = await client.responses.create({ model: "gpt-5", input: "Hello" });
 console.log(res.output_text);
 ```
 
+Reasoning and stateless request (encrypted reasoning by default):
+
+```js
+import OpenAI from "openai";
+const client = new OpenAI();
+
+const res = await client.responses.create({
+  model: "gpt-5",
+  input,
+  store: false,
+  reasoning: { effort: "minimal" }
+});
+console.log(res.output_text);
+```
+
 Streaming (if originally used):
 
 ```js

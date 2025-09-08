@@ -12,4 +12,13 @@ var req = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/res
 req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
 ```
 
+Reasoning and stateless request:
+
+```csharp
+var payload = "{\"model\":\"gpt-5\",\"input\":\"Hello\",\"store\":false,\"reasoning\":{\"effort\":\"minimal\"}}";
+var req2 = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/responses")
+{ Content = new StringContent(payload, Encoding.UTF8, "application/json") };
+req2.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
+```
+
 
