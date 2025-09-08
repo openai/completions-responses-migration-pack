@@ -23,7 +23,15 @@ MIGRATE_TO_GPT5="${MIGRATE_TO_GPT5:-1}"
 BRANCH_NAME="${BRANCH_NAME:-}"
 DANGEROUS_CONFIRM="${DANGEROUS_CONFIRM:-}"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve the script directory robustly, even when executed via stdin (curl | bash)
+# Avoid unbound variable under 'set -u' by using default expansion
+_SCRIPT_PATH="${BASH_SOURCE[0]:-}"
+if [[ -n "$_SCRIPT_PATH" && -e "$_SCRIPT_PATH" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "$_SCRIPT_PATH")" && pwd)"
+else
+  # Fallback: use current working directory (no local kit copying when run from stdin)
+  SCRIPT_DIR="$(pwd)"
+fi
 
 log() { printf "[*] %s\n" "$*"; }
 info() { printf "[i] %s\n" "$*"; }
