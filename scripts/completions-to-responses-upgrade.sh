@@ -48,7 +48,7 @@ Options:
   -r, --repo <path>        Path to the target git repository
   -m, --model <name>       Model to use (default: gpt-5)
       --full-auto          Run Codex in full automation (no approvals)
-  -n, --dry-run            Plan only; no writes. Emit .diff instead of edits
+  -n, --dry-run            Plan only; no workspace writes. Print proposed diff to stdout
   -a, --approval <policy>  Approval policy: untrusted|on-failure|on-request|never
       --write              Force write-enabled mode (alias for: --dry-run off)
       --dangerous          Bypass approvals and sandbox (NOT recommended)
@@ -434,7 +434,12 @@ run_codex() {
   local unified_policy="State & retention policy: set store=false on all Responses requests; do not rely on previous message IDs or server-stored context; keep conversation state local and minimal. Reasoning policy: always include encrypted reasoning tokens; do not emit plaintext chain-of-thought."
 
   if [[ "$DRY_RUN" == "1" ]]; then
-    prompt="Read $CODEX_KIT_DIR/docs and $CODEX_KIT_DIR/prompts/migrate-to-responses.md; $model_policy $compat_policy $comments_policy $unified_policy Do not run git add/commit/push; leave commits to the bootstrap. Create a migration plan and a DETAILED unified diff of proposed changes WITHOUT writing to disk; include SDK upgrade guidance (e.g., $upgrades); suggest build commands ($builds) and test commands ($tests); summarize call site counts and impacted files."
+    # Keep guidance in memory; stdin invocation also works without a local kit.
+    local references=""
+    if [[ -n "$_SCRIPT_PATH" && -d "$SCRIPT_DIR/../docs" ]]; then
+      references="Read existing docs in $SCRIPT_DIR/../docs as reference only; do not modify them."
+    fi
+    prompt="Plan this repo's migration from OpenAI Completions/Chat Completions to Responses. Enumerate legacy call sites; propose minimal edits using /v1/responses and client.responses.create, mapping prompt to input, max_tokens to max_output_tokens, and response_format to text.format. Preserve existing streaming behavior and adapt callers to Responses outputs. $references $model_policy $compat_policy $comments_policy $unified_policy Respect existing repository guidance. This is a read-only planning run: do not modify any files, create branches, run git add/commit/push, or open a PR. Do not install dependencies or run builds/tests; only suggest commands. Create a migration plan and a DETAILED unified diff of proposed changes WITHOUT writing to disk; print the plan and diff to stdout, never to a .diff file. Include SDK upgrade guidance (e.g., $upgrades); suggest build commands ($builds) and test commands ($tests); summarize call site counts and impacted files."
   else
     prompt="Read $CODEX_KIT_DIR/docs and $CODEX_KIT_DIR/prompts/migrate-to-responses.md; $model_policy $compat_policy $comments_policy $unified_policy Do not run git add/commit/push; leave commits to the bootstrap. Migrate this repo from Completions to Responses; upgrade the OpenAI SDK to a version supporting Responses (e.g., $upgrades) and reinstall deps; run build if present ($builds); run tests if present ($tests); print a final summary."
   fi
@@ -498,6 +503,11 @@ run_codex() {
 }
 
 post_run() {
+  # Skip all cleanup and publication, including inherited AGENTS ownership flags.
+  if [[ "$DRY_RUN" == "1" ]]; then
+    info "Dry-run complete: review the plan and proposed diff above; rerun with --write to apply changes."
+    return
+  fi
   local COMMIT_MADE=0
 
   # Always remove AGENTS.md if we created it, regardless of commit mode
@@ -551,6 +561,10 @@ post_run() {
 
 main() {
   parse_args "$@"
+  if [[ "$DRY_RUN" == "1" ]]; then
+    # Git's read operations must not refresh/write the target index either.
+    export GIT_OPTIONAL_LOCKS=0
+  fi
   preflight
   install_codex
   ensure_auth
@@ -562,13 +576,17 @@ main() {
   if [[ "$NO_INTERACTIVE" == "1" && "$DRY_RUN" != "1" && -z "$APPROVAL_POLICY" && "$MODE_FULL_AUTO" != "1" && "$DANGEROUS_MODE" != "1" ]]; then
     MODE_FULL_AUTO=1
   fi
-  local branch
-  branch=$(create_branch)
-  info "Created branch: $branch"
-  prep_kit
+  if [[ "$DRY_RUN" != "1" ]]; then
+    local branch
+    branch=$(create_branch)
+    info "Created branch: $branch"
+    prep_kit
+  fi
   run_codex
   post_run
-  info "Next steps: review changes, push the branch, and open a PR."
+  if [[ "$DRY_RUN" != "1" ]]; then
+    info "Next steps: review changes, push the branch, and open a PR."
+  fi
 }
 
 main "$@"

@@ -52,11 +52,13 @@ Non‑interactive (write mode by default):
 bash scripts/completions-to-responses-upgrade.sh --repo /path/to/repo --no-interactive
 ```
 
-Dry‑run (no edits, prints a unified diff plan):
+Dry‑run (no target workspace writes, prints a plan and proposed unified diff to stdout):
 
 ```bash
 bash scripts/completions-to-responses-upgrade.sh --repo /path/to/repo --no-interactive --dry-run
 ```
+
+Dry-run preserves the current branch, Git metadata, and tracked, untracked, and ignored files, including existing `AGENTS.md` guidance. It skips branch creation, kit setup, cleanup, commits, and PR creation, even with `--full-auto`, `--dangerous`, `--auto-commit`, or `--open-pr` (or their environment equivalents). Codex uses the read-only sandbox and receives migration guidance in its prompt, with existing local source docs as references when available. No `.diff` file is created. Installation/authentication prerequisites still apply; builds, tests, and dependency upgrades are only suggested. The existing dirty-tree refusal in non-interactive mode still applies. Use `--write` to disable dry-run explicitly.
 
 Full‑auto (no approvals, write‑enabled sandbox):
 
@@ -107,6 +109,8 @@ State & retention policy:
 3) Drops a small docs pack and sets `AGENTS.md` guidance
 4) Runs Codex in automation mode with a structured prompt
 5) Shows a final summary; optionally opens a PR
+
+In dry-run, steps 2–3 are skipped and steps 4–5 only produce the plan described above.
 
 ### Troubleshooting
 - “unexpected argument” errors: ensure the Codex CLI is up to date

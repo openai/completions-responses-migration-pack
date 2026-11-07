@@ -1,5 +1,7 @@
 ### Migration notes (Completions → Responses)
 
+- **Preview without workspace writes**: run the bootstrap with `--dry-run` (or `DRY_RUN=1`). It keeps the current branch and existing guidance, skips kit setup and all cleanup/commit/PR actions, and asks Codex to print a plan and proposed diff to stdout using the read-only sandbox. It suggests dependency upgrades, builds, and tests without running them. No `.diff` file is saved. `--full-auto`, `--dangerous`, `--auto-commit`, and `--open-pr` do not override dry-run; `--write` explicitly selects write mode.
+
 - **Why migrate**: Responses is the unified API for text, tools, and streaming; Completions/Chat Completions are legacy. With GPT‑5, Responses is required for best performance: GPT‑5 orchestrates tool calls as part of its internal reasoning and relies on Responses’ structured tool flow. Staying on Completions can degrade intelligence and cause repeated tool calls because legacy endpoints don’t preserve the model’s tool context.
 - **HTTP**: switch `POST /v1/completions` → `POST /v1/responses`.
 - **Fields**: `prompt` → `input`, `max_tokens` → `max_output_tokens`. `temperature` remains.
